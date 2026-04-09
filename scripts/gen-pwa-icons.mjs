@@ -12,18 +12,12 @@ const appDir = join(root, 'app')
 const iconsDir = join(publicDir, 'icons')
 mkdirSync(iconsDir, { recursive: true })
 
-const SOURCE = join(publicDir, '4652F789-43D5-4841-B491-533AA408B528.jpeg')
-const BG = { r: 15, g: 23, b: 42, alpha: 1 } // #0f172a
+const SOURCE = join(publicDir, 'IMG_3498.png')
 
-async function pad(size, padding = 0.12) {
-  const inner = Math.round(size * (1 - padding * 2))
-  const logo = await sharp(SOURCE)
-    .resize(inner, inner, { fit: 'contain', background: BG })
-    .toBuffer()
-  return sharp({
-    create: { width: size, height: size, channels: 4, background: BG },
-  })
-    .composite([{ input: logo, gravity: 'center' }])
+async function pad(size, _padding = 0) {
+  // New logo already includes its own background — fill the full square.
+  return sharp(SOURCE)
+    .resize(size, size, { fit: 'cover' })
     .png()
     .toBuffer()
 }
