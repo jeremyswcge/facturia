@@ -26,9 +26,15 @@ function chf(n: number) {
   return new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(n)
 }
 
+const UTILISATEURS = [
+  { value: 'jeremy', label: 'Jérémy', color: 'bg-blue-600', light: 'bg-blue-900/40 text-blue-400' },
+  { value: 'melina', label: 'Mélina', color: 'bg-pink-600', light: 'bg-pink-900/40 text-pink-400' },
+  { value: 'commun', label: 'Commun', color: 'bg-slate-600', light: 'bg-slate-800 text-slate-400' },
+] as const
+
 const emptyForm = {
   emetteur: '', montant: '', dateReception: format(new Date(), 'yyyy-MM-dd'),
-  dateEcheance: '', categorie: 'autre', notes: '',
+  dateEcheance: '', categorie: 'autre', notes: '', utilisateur: 'commun' as 'jeremy' | 'melina' | 'commun',
 }
 
 export default function FacturesPage() {
@@ -36,6 +42,7 @@ export default function FacturesPage() {
   const [loading, setLoading] = useState(true)
   const [filterPaid, setFilterPaid] = useState<'all' | 'paid' | 'pending'>('all')
   const [filterCat, setFilterCat] = useState('')
+  const [filterUser, setFilterUser] = useState<'all' | 'jeremy' | 'melina' | 'commun'>('all')
   const [showModal, setShowModal] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -58,6 +65,7 @@ export default function FacturesPage() {
   const filtered = factures
     .filter(f => filterPaid === 'all' || (filterPaid === 'paid' ? f.payee : !f.payee))
     .filter(f => !filterCat || f.categorie === filterCat)
+    .filter(f => filterUser === 'all' || (f.utilisateur || 'commun') === filterUser)
 
   async function togglePaid(f: Facture) {
     await fetch('/api/factures', {
@@ -66,6 +74,18 @@ export default function FacturesPage() {
       body: JSON.stringify({ action: 'marquer-payee', id: f.id, payee: !f.payee }),
     })
     setFactures(prev => prev.map(x => x.id === f.id ? { ...x, payee: !x.payee } : x))
+  }
+
+  async function cycleUtilisateur(f: Facture) {
+    const order: Array<'jeremy' | 'melina' | 'commun'> = ['jeremy', 'melina', 'commun']
+    const current = f.utilisateur || 'commun'
+    const next = order[(order.indexOf(current) + 1) % order.length]
+    await fetch('/api/factures', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update', id: f.id, data: { utilisateur: next } }),
+    })
+    setFactures(prev => prev.map(x => x.id === f.id ? { ...x, utilisateur: next } : x))
   }
 
   async function deleteFacture(id: string) {
@@ -93,6 +113,7 @@ export default function FacturesPage() {
       dateEcheance: f.dateEcheance || '',
       categorie: f.categorie || 'autre',
       notes: f.notes || '',
+      utilisateur: f.utilisateur || 'commun',
     })
     setShowModal(true)
   }
@@ -107,6 +128,7 @@ export default function FacturesPage() {
       dateEcheance: form.dateEcheance || undefined,
       categorie: form.categorie,
       notes: form.notes || undefined,
+      utilisateur: form.utilisateur,
       payee: false,
     }
     if (editId) {
@@ -170,6 +192,17 @@ export default function FacturesPage() {
         >
           {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
+        <div className="flex rounded-lg border border-slate-700 overflow-hidden">
+          {([{ value: 'all', label: 'Tous' }, ...UTILISATEURS] as const).map((u) => (
+            <button
+              key={u.value}
+              onClick={() => setFilterUser(u.value as any)}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${filterUser === u.value ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+            >
+              {u.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* List */}
@@ -193,10 +226,22 @@ export default function FacturesPage() {
               </button>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`font-medium text-sm ${f.payee ? 'line-through text-slate-500' : 'text-slate-200'}`}>
                     {f.emetteur}
                   </span>
+                  {(() => {
+                    const u = UTILISATEURS.find(u => u.value === (f.utilisateur || 'commun'))
+                    return u ? (
+                      <button
+                        onClick={() => cycleUtilisateur(f)}
+                        title="Changer d'utilisateur"
+                        className={`text-xs px-2 py-0.5 rounded-full transition-opacity hover:opacity-80 active:opacity-60 ${u.light}`}
+                      >
+                        {u.label}
+                      </button>
+                    ) : null
+                  })()}
                   {f.categorie && (
                     <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">
                       {CATEGORIES.find(c => c.value === f.categorie)?.label || f.categorie}
@@ -308,6 +353,21 @@ export default function FacturesPage() {
                   rows={2}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 resize-none"
                 />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-2">Utilisateur</label>
+                <div className="flex gap-2">
+                  {UTILISATEURS.map(u => (
+                    <button
+                      key={u.value}
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, utilisateur: u.value }))}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${form.utilisateur === u.value ? `${u.color} border-transparent text-white` : 'border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+                    >
+                      {u.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="flex gap-3 mt-6">

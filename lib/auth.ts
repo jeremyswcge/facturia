@@ -11,8 +11,17 @@ import { getAuthInstance } from './firebase'
 // Ajouter ici les adresses Gmail qui peuvent accéder à Facturia
 export const AUTHORIZED_EMAILS = [
   'jeremyswcge@gmail.com',
-  // Ajouter l'email de Mélina ici si nécessaire
+  'bergermelina2@gmail.com',
 ]
+
+export const ADMIN_EMAILS = [
+  'jeremyswcge@gmail.com',
+]
+
+export function isAdmin(email: string | null): boolean {
+  if (!email) return false
+  return ADMIN_EMAILS.includes(email.toLowerCase())
+}
 
 export function isAuthorized(email: string | null): boolean {
   if (!email) return false
@@ -27,6 +36,16 @@ export async function signInWithGoogle(): Promise<User> {
     await signOut(getAuthInstance())
     throw new Error('Accès refusé. Ce compte Google n\'est pas autorisé.')
   }
+  // Log the connection (fire and forget)
+  fetch('/api/connexions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: result.user.email,
+      displayName: result.user.displayName,
+      photoURL: result.user.photoURL,
+    }),
+  }).catch(() => {})
   return result.user
 }
 

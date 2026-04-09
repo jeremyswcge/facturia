@@ -1,3 +1,5 @@
+export type Utilisateur = 'jeremy' | 'melina' | 'commun'
+
 export interface Facture {
   id: string
   emetteur: string
@@ -11,6 +13,7 @@ export interface Facture {
   gmailMessageId?: string
   categorie?: string
   notes?: string
+  utilisateur?: Utilisateur
   createdAt: string
 }
 

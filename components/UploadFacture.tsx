@@ -43,6 +43,13 @@ export default function UploadFacture({ onSaved, onClose }: Props) {
   const [dateEcheance, setDateEcheance] = useState('')
   const [categorie, setCategorie] = useState('autre')
   const [notes, setNotes] = useState('')
+  const [utilisateur, setUtilisateur] = useState<'jeremy' | 'melina' | 'commun'>('commun')
+
+  const UTILISATEURS = [
+    { value: 'jeremy' as const, label: 'Jérémy', color: 'bg-blue-600' },
+    { value: 'melina' as const, label: 'Mélina', color: 'bg-pink-600' },
+    { value: 'commun' as const, label: 'Commun', color: 'bg-slate-600' },
+  ]
 
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
@@ -80,6 +87,7 @@ export default function UploadFacture({ onSaved, onClose }: Props) {
     setResult(null)
     setErrorMsg('')
     setSaving(false)
+    setUtilisateur('commun')
     setStep('select')
   }
 
@@ -127,6 +135,7 @@ export default function UploadFacture({ onSaved, onClose }: Props) {
             dateEcheance: dateEcheance || undefined,
             categorie,
             notes: notes || undefined,
+            utilisateur,
             payee: false,
           },
         }),
@@ -412,6 +421,22 @@ export default function UploadFacture({ onSaved, onClose }: Props) {
                     rows={2}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-violet-500 resize-none"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-400 mb-2">Utilisateur</label>
+                  <div className="flex gap-2">
+                    {UTILISATEURS.map(u => (
+                      <button
+                        key={u.value}
+                        type="button"
+                        onClick={() => setUtilisateur(u.value)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${utilisateur === u.value ? `${u.color} border-transparent text-white` : 'border-slate-700 text-slate-400 active:bg-slate-800'}`}
+                      >
+                        {u.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {result?.numeroFacture && (

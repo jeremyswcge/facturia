@@ -9,6 +9,7 @@ const links = [
   { href: '/dashboard', label: 'Tableau de bord', icon: '📊' },
   { href: '/factures', label: 'Factures', icon: '🧾' },
   { href: '/frais-fixes', label: 'Frais fixes', icon: '📌' },
+  { href: '/profil', label: 'Profil', icon: '👤' },
 ]
 
 export default function Nav() {
@@ -75,15 +76,6 @@ export default function Nav() {
             <span className="text-[11px] leading-tight">{l.label}</span>
           </Link>
         ))}
-        {user && (
-          <button
-            onClick={logout}
-            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-4 min-h-[72px] font-medium text-slate-500 active:text-red-400 transition-colors"
-          >
-            <span className="text-2xl">🚪</span>
-            <span className="text-[11px] leading-tight">Quitter</span>
-          </button>
-        )}
       </nav>
     </>
   )
