@@ -18,9 +18,9 @@ export default function Nav() {
   return (
     <>
       {/* Desktop top bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 h-16 flex items-center px-6">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 h-28 flex items-center px-6">
         <div className="flex items-center gap-3 mr-10">
-          <img src="/icons/icon-192.png" alt="Facturia" className="w-12 h-12 rounded-lg" />
+          <img src="/icons/icon-192.png" alt="Facturia" className="w-24 h-24 rounded-lg" />
           <span className="font-semibold text-lg tracking-tight">Facturia</span>
         </div>
         <nav className="hidden md:flex gap-1 flex-1">
