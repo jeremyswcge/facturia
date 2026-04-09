@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getFactures, addFacture, updateFacture, deleteFacture, marquerPayee } from '@/lib/firestore'
+import { listDocs, addDoc, updateDoc, deleteDoc } from '@/lib/firestore-rest'
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const mois = searchParams.get('mois') || undefined
-    const annee = searchParams.get('annee') ? parseInt(searchParams.get('annee')!) : undefined
-    const factures = await getFactures(mois, annee)
+    const mois = searchParams.get('mois')
+    const annee = searchParams.get('annee')
+
+    let factures = await listDocs('factures')
+
+    if (mois && annee) {
+      const debut = `${annee}-${mois.padStart(2, '0')}-01`
+      const fin = `${annee}-${mois.padStart(2, '0')}-31`
+      factures = factures.filter(f => f.dateReception >= debut && f.dateReception <= fin)
+    }
+
+    factures.sort((a, b) => (b.dateReception || '').localeCompare(a.dateReception || ''))
     return NextResponse.json(factures)
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -19,25 +28,28 @@ export async function POST(req: NextRequest) {
     const { action, id, data, payee } = body
 
     if (action === 'marquer-payee') {
-      await marquerPayee(id, payee)
+      await updateDoc('factures', id, {
+        payee,
+        datePaiement: payee ? new Date().toISOString().split('T')[0] : null,
+      })
       return NextResponse.json({ success: true })
     }
 
     if (action === 'update') {
-      await updateFacture(id, data)
+      await updateDoc('factures', id, data)
       return NextResponse.json({ success: true })
     }
 
     if (action === 'delete') {
-      await deleteFacture(id)
+      await deleteDoc('factures', id)
       return NextResponse.json({ success: true })
     }
 
-    // Add new facture
-    const newId = await addFacture({
+    // Nouvelle facture
+    const newId = await addDoc('factures', {
       ...data,
       devise: 'CHF',
-      source: 'manuel',
+      source: data.source || 'manuel',
       createdAt: new Date().toISOString(),
     })
     return NextResponse.json({ id: newId })
