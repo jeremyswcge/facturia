@@ -14,6 +14,8 @@ export interface Facture {
   categorie?: string
   notes?: string
   utilisateur?: Utilisateur
+  buclin?: boolean
+  buclinPaye?: boolean
   createdAt: string
 }
 

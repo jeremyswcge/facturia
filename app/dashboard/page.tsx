@@ -29,6 +29,33 @@ export default function Dashboard() {
   const [historique, setHistorique] = useState<{ mois: string; depenses: number }[]>([])
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'))
   const [loading, setLoading] = useState(true)
+  const [allFactures, setAllFactures] = useState<Facture[]>([])
+  const [showBuclinPicker, setShowBuclinPicker] = useState(false)
+
+  const loadAll = useCallback(async () => {
+    const res = await fetch('/api/factures')
+    const data = await res.json()
+    setAllFactures(Array.isArray(data) ? data : [])
+  }, [])
+
+  useEffect(() => { loadAll() }, [loadAll])
+
+  async function toggleBuclinField(f: Facture, field: 'buclin' | 'buclinPaye', value: boolean) {
+    const patch: Partial<Facture> = { [field]: value }
+    if (field === 'buclin' && !value) patch.buclinPaye = false
+    setAllFactures(prev => prev.map(x => x.id === f.id ? { ...x, ...patch } : x))
+    await fetch('/api/factures', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update', id: f.id, data: patch }),
+    })
+  }
+
+  const buclinFactures = allFactures.filter(f => f.buclin)
+  const buclinAPayer = buclinFactures.filter(f => !f.buclinPaye)
+  const buclinPayees = buclinFactures.filter(f => f.buclinPaye)
+  const totalAPayer = buclinAPayer.reduce((s, f) => s + (f.montant || 0), 0)
+  const totalDejaPaye = buclinPayees.reduce((s, f) => s + (f.montant || 0), 0)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -181,12 +208,86 @@ export default function Dashboard() {
 
       {/* Remboursement Buclin */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <h2 className="font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span>🔁</span> Remboursement Buclin
-        </h2>
-        <div className="text-sm text-slate-400">
-          Section à compléter — précise-moi ce que tu veux y afficher.
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-slate-200 flex items-center gap-2">
+            <span>🔁</span> Remboursement Buclin
+          </h2>
+          <button
+            onClick={() => setShowBuclinPicker(v => !v)}
+            className="text-xs text-violet-400 hover:text-violet-300"
+          >
+            {showBuclinPicker ? 'Fermer' : 'Sélectionner les factures →'}
+          </button>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-gradient-to-br from-amber-900/40 to-amber-900/10 border border-amber-800/50 rounded-xl p-4">
+            <div className="text-2xl mb-2">⏳</div>
+            <div className="text-lg font-bold text-slate-100 truncate">{chf(totalAPayer)}</div>
+            <div className="text-xs text-slate-400 mt-1">
+              À rembourser ({buclinAPayer.length})
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-900/40 to-emerald-900/10 border border-emerald-800/50 rounded-xl p-4">
+            <div className="text-2xl mb-2">✅</div>
+            <div className="text-lg font-bold text-slate-100 truncate">{chf(totalDejaPaye)}</div>
+            <div className="text-xs text-slate-400 mt-1">
+              Déjà remboursé ({buclinPayees.length})
+            </div>
+          </div>
+        </div>
+
+        {buclinFactures.length > 0 && !showBuclinPicker && (
+          <div className="mt-4 space-y-2">
+            {buclinFactures.map(f => (
+              <div key={f.id} className={`flex items-center gap-3 p-2.5 rounded-lg border ${f.buclinPaye ? 'bg-emerald-900/10 border-emerald-800/40' : 'bg-slate-800/50 border-slate-700'}`}>
+                <button
+                  onClick={() => toggleBuclinField(f, 'buclinPaye', !f.buclinPaye)}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 border-2 ${f.buclinPaye ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-600 hover:border-emerald-500'}`}
+                  title={f.buclinPaye ? 'Marquer non remboursé' : 'Marquer remboursé'}
+                >
+                  {f.buclinPaye && <span className="text-xs">✓</span>}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm font-medium ${f.buclinPaye ? 'line-through text-slate-500' : 'text-slate-200'}`}>{f.emetteur}</div>
+                  <div className="text-xs text-slate-500">
+                    {f.dateReception ? format(new Date(f.dateReception), 'dd MMM yyyy', { locale: fr }) : ''}
+                  </div>
+                </div>
+                <div className={`font-semibold text-sm flex-shrink-0 ${f.buclinPaye ? 'text-slate-500' : 'text-slate-100'}`}>
+                  {chf(f.montant)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showBuclinPicker && (
+          <div className="mt-4 border-t border-slate-800 pt-4">
+            <div className="text-xs text-slate-500 mb-2">Coche les factures à inclure dans le remboursement Buclin</div>
+            <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+              {allFactures.length === 0 ? (
+                <div className="text-slate-500 text-sm text-center py-4">Aucune facture</div>
+              ) : allFactures.map(f => (
+                <label key={f.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!f.buclin}
+                    onChange={e => toggleBuclinField(f, 'buclin', e.target.checked)}
+                    className="w-4 h-4 accent-violet-600 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-slate-200 truncate">{f.emetteur}</div>
+                    <div className="text-xs text-slate-500">
+                      {f.dateReception ? format(new Date(f.dateReception), 'dd MMM yyyy', { locale: fr }) : ''}
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-300 flex-shrink-0">{chf(f.montant)}</div>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Charts */}
