@@ -24,6 +24,14 @@ export interface FraisFixes {
   categorie: string
   actif: boolean
   createdAt: string
+  // Période de référence (mois/année de début pour les frais à date fixe)
+  moisDebut?: string   // "MM"
+  anneeDebut?: string  // "YYYY"
+  // Pour les annuels : mode de paiement
+  modeAnnuel?: 'mensualise' | 'paiement-unique'
+  // Pour paiement unique annuel : mois et année du paiement
+  moisPaiementAnnuel?: string  // "MM"
+  anneePaiementAnnuel?: string // "YYYY"
 }
 
 export interface Salaire {

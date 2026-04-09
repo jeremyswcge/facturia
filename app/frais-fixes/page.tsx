@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import type { FraisFixes } from '@/lib/types'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
 const CATEGORIES = [
   { value: 'loyer', label: 'Loyer', icon: '🏠' },
@@ -18,28 +20,65 @@ const CATEGORIES = [
   { value: 'autre', label: 'Autre', icon: '📦' },
 ]
 
-const FREQUENCES = [
-  { value: 'mensuel', label: 'Mensuel' },
-  { value: 'trimestriel', label: 'Trimestriel' },
-  { value: 'annuel', label: 'Annuel' },
+const MOIS = [
+  { value: '01', label: 'Janvier' }, { value: '02', label: 'Février' },
+  { value: '03', label: 'Mars' }, { value: '04', label: 'Avril' },
+  { value: '05', label: 'Mai' }, { value: '06', label: 'Juin' },
+  { value: '07', label: 'Juillet' }, { value: '08', label: 'Août' },
+  { value: '09', label: 'Septembre' }, { value: '10', label: 'Octobre' },
+  { value: '11', label: 'Novembre' }, { value: '12', label: 'Décembre' },
 ]
+
+const ANNEES = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - 1 + i))
 
 function chf(n: number) {
   return new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(n)
 }
 
 function montantMensuel(f: FraisFixes): number {
-  if (f.frequence === 'annuel') return f.montant / 12
+  if (f.frequence === 'annuel') {
+    if (f.modeAnnuel === 'paiement-unique') return f.montant // affiché en totalité le mois du paiement
+    return f.montant / 12
+  }
   if (f.frequence === 'trimestriel') return f.montant / 3
   return f.montant
 }
 
-const emptyForm: {
-  nom: string; montant: string; frequence: 'mensuel' | 'annuel' | 'trimestriel'
-  categorie: string; jourPrelevement: string
-} = {
+function labelFrequence(f: FraisFixes): string {
+  if (f.frequence === 'mensuel') return 'Mensuel'
+  if (f.frequence === 'trimestriel') return 'Trimestriel'
+  if (f.frequence === 'annuel') {
+    if (f.modeAnnuel === 'paiement-unique') {
+      const m = MOIS.find(x => x.value === f.moisPaiementAnnuel)?.label || ''
+      return `Annuel · paiement unique${m ? ` en ${m}` : ''} ${f.anneePaiementAnnuel || ''}`
+    }
+    return 'Annuel · mensualité'
+  }
+  return ''
+}
+
+type FormType = {
+  nom: string
+  montant: string
+  frequence: 'mensuel' | 'annuel' | 'trimestriel'
+  categorie: string
+  jourPrelevement: string
+  moisDebut: string
+  anneeDebut: string
+  modeAnnuel: 'mensualise' | 'paiement-unique'
+  moisPaiementAnnuel: string
+  anneePaiementAnnuel: string
+}
+
+const now = new Date()
+const emptyForm: FormType = {
   nom: '', montant: '', frequence: 'mensuel',
   categorie: 'autre', jourPrelevement: '',
+  moisDebut: String(now.getMonth() + 1).padStart(2, '0'),
+  anneeDebut: String(now.getFullYear()),
+  modeAnnuel: 'mensualise',
+  moisPaiementAnnuel: String(now.getMonth() + 1).padStart(2, '0'),
+  anneePaiementAnnuel: String(now.getFullYear()),
 }
 
 export default function FraisFixesPage() {
@@ -47,9 +86,11 @@ export default function FraisFixesPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
-  const [form, setForm] = useState<typeof emptyForm>(emptyForm)
+  const [form, setForm] = useState<FormType>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+
+  const set = (k: keyof FormType, v: string) => setForm(p => ({ ...p, [k]: v }))
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -64,7 +105,9 @@ export default function FraisFixesPage() {
 
   useEffect(() => { load() }, [load])
 
-  const totalMensuel = frais.filter(f => f.actif).reduce((s, f) => s + montantMensuel(f), 0)
+  const totalMensuel = frais
+    .filter(f => f.actif && f.modeAnnuel !== 'paiement-unique')
+    .reduce((s, f) => s + montantMensuel(f), 0)
 
   async function toggleActif(f: FraisFixes) {
     await fetch('/api/frais-fixes', {
@@ -88,6 +131,7 @@ export default function FraisFixesPage() {
   function openNew() {
     setEditId(null)
     setForm(emptyForm)
+    setSaveError('')
     setShowModal(true)
   }
 
@@ -99,7 +143,13 @@ export default function FraisFixesPage() {
       frequence: f.frequence,
       categorie: f.categorie,
       jourPrelevement: f.jourPrelevement ? String(f.jourPrelevement) : '',
+      moisDebut: f.moisDebut || String(now.getMonth() + 1).padStart(2, '0'),
+      anneeDebut: f.anneeDebut || String(now.getFullYear()),
+      modeAnnuel: f.modeAnnuel || 'mensualise',
+      moisPaiementAnnuel: f.moisPaiementAnnuel || String(now.getMonth() + 1).padStart(2, '0'),
+      anneePaiementAnnuel: f.anneePaiementAnnuel || String(now.getFullYear()),
     })
+    setSaveError('')
     setShowModal(true)
   }
 
@@ -108,13 +158,22 @@ export default function FraisFixesPage() {
     setSaving(true)
     setSaveError('')
     try {
-      const data = {
+      const data: Partial<FraisFixes> = {
         nom: form.nom,
         montant: parseFloat(form.montant),
         frequence: form.frequence,
         categorie: form.categorie,
         jourPrelevement: form.jourPrelevement ? parseInt(form.jourPrelevement) : undefined,
+        moisDebut: form.moisDebut,
+        anneeDebut: form.anneeDebut,
         actif: true,
+      }
+      if (form.frequence === 'annuel') {
+        data.modeAnnuel = form.modeAnnuel
+        if (form.modeAnnuel === 'paiement-unique') {
+          data.moisPaiementAnnuel = form.moisPaiementAnnuel
+          data.anneePaiementAnnuel = form.anneePaiementAnnuel
+        }
       }
       const res = await fetch('/api/frais-fixes', {
         method: 'POST',
@@ -132,7 +191,6 @@ export default function FraisFixesPage() {
     }
   }
 
-  // Group by category
   const grouped = CATEGORIES.map(cat => ({
     ...cat,
     items: frais.filter(f => f.categorie === cat.value),
@@ -143,7 +201,9 @@ export default function FraisFixesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-100">Frais fixes</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Total mensuel : <span className="text-violet-400 font-semibold">{chf(totalMensuel)}</span></p>
+          <p className="text-slate-400 text-sm mt-0.5">
+            Mensualités : <span className="text-violet-400 font-semibold">{chf(totalMensuel)}</span>/mois
+          </p>
         </div>
         <button
           onClick={openNew}
@@ -176,7 +236,7 @@ export default function FraisFixesPage() {
               </div>
               <div className="divide-y divide-slate-800">
                 {group.items.map(f => (
-                  <div key={f.id} className={`flex items-center gap-4 px-4 py-3 transition-opacity ${f.actif ? '' : 'opacity-50'}`}>
+                  <div key={f.id} className={`flex items-center gap-3 px-4 py-3 transition-opacity ${f.actif ? '' : 'opacity-50'}`}>
                     <button
                       onClick={() => toggleActif(f)}
                       className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${f.actif ? 'bg-violet-600' : 'bg-slate-700'}`}
@@ -187,31 +247,22 @@ export default function FraisFixesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm text-slate-200">{f.nom}</div>
                       <div className="text-xs text-slate-500">
-                        {FREQUENCES.find(fr => fr.value === f.frequence)?.label}
-                        {f.jourPrelevement ? ` · prélèvement le ${f.jourPrelevement}` : ''}
+                        {labelFrequence(f)}
+                        {f.jourPrelevement ? ` · le ${f.jourPrelevement}` : ''}
+                        {f.moisDebut && f.anneeDebut ? ` · dès ${MOIS.find(m => m.value === f.moisDebut)?.label} ${f.anneeDebut}` : ''}
                       </div>
                     </div>
 
                     <div className="text-right flex-shrink-0">
                       <div className="font-semibold text-sm text-slate-100">{chf(f.montant)}</div>
-                      {f.frequence !== 'mensuel' && (
+                      {f.frequence !== 'mensuel' && f.modeAnnuel !== 'paiement-unique' && (
                         <div className="text-xs text-slate-500">{chf(montantMensuel(f))}/mois</div>
                       )}
                     </div>
 
                     <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => openEdit(f)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => deleteFrais(f.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-900/20 transition-colors"
-                      >
-                        🗑
-                      </button>
+                      <button onClick={() => openEdit(f)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors">✏️</button>
+                      <button onClick={() => deleteFrais(f.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-900/20 transition-colors">🗑</button>
                     </div>
                   </div>
                 ))}
@@ -224,84 +275,161 @@ export default function FraisFixesPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="font-bold text-lg text-slate-100 mb-5">
-              {editId ? 'Modifier le frais fixe' : 'Nouveau frais fixe'}
-            </h2>
-            <div className="space-y-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl max-h-[90dvh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 flex-shrink-0">
+              <h2 className="font-bold text-base text-slate-100">
+                {editId ? 'Modifier' : 'Nouveau frais fixe'}
+              </h2>
+              <button onClick={() => setShowModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 text-lg">✕</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {/* Nom */}
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Nom *</label>
+                <label className="block text-xs text-slate-400 mb-1.5">Nom *</label>
                 <input
                   value={form.nom}
-                  onChange={e => setForm(p => ({ ...p, nom: e.target.value }))}
+                  onChange={e => set('nom', e.target.value)}
                   placeholder="Loyer, Swisscom, Netflix..."
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
                 />
               </div>
+
+              {/* Montant + Fréquence */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Montant CHF *</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">Montant CHF *</label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="number" step="0.01" inputMode="decimal"
                     value={form.montant}
-                    onChange={e => setForm(p => ({ ...p, montant: e.target.value }))}
+                    onChange={e => set('montant', e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Fréquence</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">Fréquence</label>
                   <select
                     value={form.frequence}
-                    onChange={e => setForm(p => ({ ...p, frequence: e.target.value as any }))}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                    onChange={e => set('frequence', e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
                   >
-                    {FREQUENCES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                    <option value="mensuel">Mensuel</option>
+                    <option value="trimestriel">Trimestriel</option>
+                    <option value="annuel">Annuel</option>
                   </select>
                 </div>
               </div>
+
+              {/* Options annuel */}
+              {form.frequence === 'annuel' && (
+                <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-medium text-slate-300">Mode de paiement annuel</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'mensualise', label: 'Mensualités', sub: `${form.montant ? chf(parseFloat(form.montant) / 12) : 'CHF —'}/mois` },
+                      { value: 'paiement-unique', label: 'Paiement unique', sub: 'Un seul mois' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => set('modeAnnuel', opt.value)}
+                        className={`flex flex-col items-start p-3 rounded-xl border text-left transition-colors ${form.modeAnnuel === opt.value ? 'bg-violet-600/20 border-violet-500 text-violet-300' : 'border-slate-600 text-slate-400 hover:border-slate-500'}`}
+                      >
+                        <span className="text-sm font-medium">{opt.label}</span>
+                        <span className="text-xs mt-0.5 opacity-70">{opt.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Mois/année du paiement unique */}
+                  {form.modeAnnuel === 'paiement-unique' && (
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1.5">Mois et année du paiement</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={form.moisPaiementAnnuel}
+                          onChange={e => set('moisPaiementAnnuel', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                        >
+                          {MOIS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                        </select>
+                        <select
+                          value={form.anneePaiementAnnuel}
+                          onChange={e => set('anneePaiementAnnuel', e.target.value)}
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                        >
+                          {ANNEES.map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Catégorie + Jour prélèvement */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Catégorie</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">Catégorie</label>
                   <select
                     value={form.categorie}
-                    onChange={e => setForm(p => ({ ...p, categorie: e.target.value }))}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                    onChange={e => set('categorie', e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
                   >
                     {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Jour prélèvement</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">Jour prélèvement</label>
                   <input
-                    type="number"
-                    min="1"
-                    max="31"
+                    type="number" min="1" max="31"
                     value={form.jourPrelevement}
-                    onChange={e => setForm(p => ({ ...p, jourPrelevement: e.target.value }))}
+                    onChange={e => set('jourPrelevement', e.target.value)}
                     placeholder="1-31"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
                   />
                 </div>
               </div>
+
+              {/* Mois et année de début */}
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Mois / Année de début</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={form.moisDebut}
+                    onChange={e => set('moisDebut', e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                  >
+                    {MOIS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                  <select
+                    value={form.anneeDebut}
+                    onChange={e => set('anneeDebut', e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
+                  >
+                    {ANNEES.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {saveError && (
+                <div className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{saveError}</div>
+              )}
             </div>
-            {saveError && (
-              <div className="mt-3 text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{saveError}</div>
-            )}
-            <div className="flex gap-3 mt-4">
+
+            <div className="flex gap-3 px-6 py-4 border-t border-slate-800 flex-shrink-0">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 border border-slate-700 text-slate-400 hover:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="flex-1 border border-slate-700 text-slate-400 hover:text-slate-200 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={save}
                 disabled={saving || !form.nom || !form.montant}
-                className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
               >
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
+                {saving ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Enregistrement...</> : 'Enregistrer'}
               </button>
             </div>
           </div>
