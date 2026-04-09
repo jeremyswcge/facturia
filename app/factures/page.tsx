@@ -333,17 +333,7 @@ export default function FacturesPage() {
       {showUpload && (
         <UploadFacture
           onClose={() => setShowUpload(false)}
-          onConfirm={async data => {
-            await fetch('/api/factures', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                data: { ...data, payee: false },
-              }),
-            })
-            setShowUpload(false)
-            load()
-          }}
+          onSaved={() => { setShowUpload(false); load() }}
         />
       )}
     </div>
