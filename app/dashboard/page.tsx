@@ -32,7 +32,7 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [m, y] = selectedMonth.split('-')
+    const [y, m] = selectedMonth.split('-')
 
     // Chargement mois sélectionné + frais fixes
     const [fRes, ffRes] = await Promise.all([
