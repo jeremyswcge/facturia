@@ -28,9 +28,11 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg shadow-violet-900/40 mb-4">
-            F
-          </div>
+          <img
+            src="/icons/icon-512.png"
+            alt="Facturia"
+            className="w-16 h-16 rounded-2xl shadow-lg shadow-violet-900/40 mb-4"
+          />
           <h1 className="text-2xl font-bold text-slate-100">Facturia</h1>
           <p className="text-slate-500 text-sm mt-1">Gestion intelligente de vos factures</p>
         </div>
