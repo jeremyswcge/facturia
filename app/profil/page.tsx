@@ -15,9 +15,9 @@ interface Connexion {
   timestamp: string
 }
 
-const MEMBERS: Record<string, { label: string; color: string }> = {
-  'jeremyswcge@gmail.com': { label: 'Jérémy', color: 'text-blue-400' },
-  'bergermelina2@gmail.com': { label: 'Mélina', color: 'text-pink-400' },
+const MEMBERS: Record<string, { label: string; color: string; utilisateur: 'jeremy' | 'melina' }> = {
+  'jeremyswcge@gmail.com': { label: 'Jérémy', color: 'text-blue-400', utilisateur: 'jeremy' },
+  'bergermelina2@gmail.com': { label: 'Mélina', color: 'text-pink-400', utilisateur: 'melina' },
 }
 
 export default function ProfilPage() {
@@ -26,6 +26,23 @@ export default function ProfilPage() {
   const [connexions, setConnexions] = useState<Connexion[]>([])
   const [loadingConnexions, setLoadingConnexions] = useState(false)
   const [showAll, setShowAll] = useState(false)
+  const [totalImpayees, setTotalImpayees] = useState<number | null>(null)
+  const [nbImpayees, setNbImpayees] = useState(0)
+
+  const myInfo = MEMBERS[user?.email?.toLowerCase() ?? '']
+
+  useEffect(() => {
+    if (!myInfo) return
+    fetch('/api/factures')
+      .then(r => r.json())
+      .then((data: Array<{ payee: boolean; montant: number; utilisateur?: string }>) => {
+        if (!Array.isArray(data)) return
+        const mes = data.filter(f => !f.payee && (f.utilisateur ?? 'commun') === myInfo.utilisateur)
+        setTotalImpayees(mes.reduce((s, f) => s + (Number(f.montant) || 0), 0))
+        setNbImpayees(mes.length)
+      })
+      .catch(() => setTotalImpayees(0))
+  }, [myInfo])
 
   useEffect(() => {
     if (!admin) return
@@ -37,8 +54,6 @@ export default function ProfilPage() {
   }, [admin])
 
   if (!user) return null
-
-  const myInfo = MEMBERS[user.email?.toLowerCase() ?? '']
 
   // Group connexions by member (excluding self for admin, or only others)
   const otherConnexions = connexions.filter(c => c.email.toLowerCase() !== user.email?.toLowerCase())
@@ -96,6 +111,28 @@ export default function ProfilPage() {
           Déconnexion
         </button>
       </div>
+
+      {/* Mes factures impayées */}
+      {myInfo && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 className="text-sm font-semibold text-slate-300 mb-2">Mes factures non payées</h2>
+          {totalImpayees === null ? (
+            <div className="text-slate-500 text-sm">Chargement...</div>
+          ) : (
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-3xl font-bold text-slate-100">
+                  {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(totalImpayees)}
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  {nbImpayees} facture{nbImpayees > 1 ? 's' : ''} en attente
+                </div>
+              </div>
+              <span className={`text-xs ${myInfo.color} font-medium`}>{myInfo.label}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Ma dernière connexion */}
       {myConnexions.length > 0 && (
