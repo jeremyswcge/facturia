@@ -31,7 +31,7 @@ export default function LoginPage() {
           <img
             src="/icons/icon-512.png"
             alt="Facturia"
-            className="w-16 h-16 rounded-2xl shadow-lg shadow-violet-900/40 mb-4"
+            className="w-28 h-28 rounded-2xl shadow-lg shadow-violet-900/40 mb-4"
           />
           <h1 className="text-2xl font-bold text-slate-100">Facturia</h1>
           <p className="text-slate-500 text-sm mt-1">Gestion intelligente de vos factures</p>
