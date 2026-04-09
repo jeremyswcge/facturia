@@ -179,6 +179,16 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Remboursement Buclin */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h2 className="font-semibold text-slate-200 mb-3 flex items-center gap-2">
+          <span>🔁</span> Remboursement Buclin
+        </h2>
+        <div className="text-sm text-slate-400">
+          Section à compléter — précise-moi ce que tu veux y afficher.
+        </div>
+      </div>
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Bar chart 6 mois */}
