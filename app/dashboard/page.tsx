@@ -96,6 +96,20 @@ export default function Dashboard() {
     .filter(f => f.actif)
     .reduce((s, f) => s + (f.frequence === 'annuel' ? f.montant / 12 : f.frequence === 'trimestriel' ? f.montant / 3 : f.montant), 0)
   const totalDepenses = totalFactures + totalFraisFixes
+
+  // Frais fixes par utilisateur (mensualisé)
+  const fraisFixesByUser: Record<string, number> = { jeremy: 0, melina: 0, chloe: 0, commun: 0 }
+  for (const f of fraisFixes.filter(x => x.actif)) {
+    const m = f.frequence === 'annuel' ? f.montant / 12 : f.frequence === 'trimestriel' ? f.montant / 3 : f.montant
+    const u = f.utilisateur || 'commun'
+    fraisFixesByUser[u] = (fraisFixesByUser[u] || 0) + m
+  }
+  const FRAIS_USERS = [
+    { value: 'jeremy', label: 'Jérémy', color: 'text-blue-400', bg: 'bg-blue-900/20 border-blue-800/50' },
+    { value: 'melina', label: 'Mélina', color: 'text-pink-400', bg: 'bg-pink-900/20 border-pink-800/50' },
+    { value: 'chloe', label: 'Chloé', color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800/50' },
+    { value: 'commun', label: 'Commun', color: 'text-slate-300', bg: 'bg-slate-800/50 border-slate-700' },
+  ]
   const facturesPayees = factures.filter(f => f.payee).length
   const facturesEnAttente = factures.filter(f => !f.payee).length
   const montantEnAttente = factures.filter(f => !f.payee).reduce((s, f) => s + (f.montant || 0), 0)
@@ -203,6 +217,22 @@ export default function Dashboard() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Frais fixes par utilisateur */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h2 className="font-semibold text-slate-200 mb-3 flex items-center gap-2">
+          <span>📌</span> Frais fixes par utilisateur
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {FRAIS_USERS.map(u => (
+            <div key={u.value} className={`border rounded-xl p-3 ${u.bg}`}>
+              <div className={`text-xs font-medium ${u.color}`}>{u.label}</div>
+              <div className="text-lg font-bold text-slate-100 mt-1">{chf(fraisFixesByUser[u.value] || 0)}</div>
+              <div className="text-[10px] text-slate-500">/mois</div>
+            </div>
+          ))}
         </div>
       </div>
 

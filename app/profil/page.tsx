@@ -28,18 +28,33 @@ export default function ProfilPage() {
   const [showAll, setShowAll] = useState(false)
   const [totalImpayees, setTotalImpayees] = useState<number | null>(null)
   const [nbImpayees, setNbImpayees] = useState(0)
+  const [totalFraisFixes, setTotalFraisFixes] = useState(0)
 
   const myInfo = MEMBERS[user?.email?.toLowerCase() ?? '']
 
   useEffect(() => {
     if (!myInfo) return
-    fetch('/api/factures')
-      .then(r => r.json())
-      .then((data: Array<{ payee: boolean; montant: number; utilisateur?: string }>) => {
-        if (!Array.isArray(data)) return
-        const mes = data.filter(f => !f.payee && (f.utilisateur ?? 'commun') === myInfo.utilisateur)
-        setTotalImpayees(mes.reduce((s, f) => s + (Number(f.montant) || 0), 0))
-        setNbImpayees(mes.length)
+    Promise.all([
+      fetch('/api/factures').then(r => r.json()),
+      fetch('/api/frais-fixes').then(r => r.json()),
+    ])
+      .then(([factures, frais]: [Array<{ payee: boolean; montant: number; utilisateur?: string }>, Array<{ actif: boolean; montant: number; frequence: string; utilisateur?: string }>]) => {
+        if (Array.isArray(factures)) {
+          const mes = factures.filter(f => !f.payee && (f.utilisateur ?? 'commun') === myInfo.utilisateur)
+          setTotalImpayees(mes.reduce((s, f) => s + (Number(f.montant) || 0), 0))
+          setNbImpayees(mes.length)
+        } else {
+          setTotalImpayees(0)
+        }
+        if (Array.isArray(frais)) {
+          const mensuel = frais
+            .filter(f => f.actif && (f.utilisateur ?? 'commun') === myInfo.utilisateur)
+            .reduce((s, f) => {
+              const m = f.frequence === 'annuel' ? f.montant / 12 : f.frequence === 'trimestriel' ? f.montant / 3 : f.montant
+              return s + (Number(m) || 0)
+            }, 0)
+          setTotalFraisFixes(mensuel)
+        }
       })
       .catch(() => setTotalImpayees(0))
   }, [myInfo])
@@ -115,21 +130,37 @@ export default function ProfilPage() {
       {/* Mes factures impayées */}
       {myInfo && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-slate-300 mb-2">Mes factures non payées</h2>
+          <h2 className="text-sm font-semibold text-slate-300 mb-2">Mon total à payer ce mois</h2>
           {totalImpayees === null ? (
             <div className="text-slate-500 text-sm">Chargement...</div>
           ) : (
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-3xl font-bold text-slate-100">
-                  {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(totalImpayees)}
+            <>
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-slate-100">
+                    {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(totalImpayees + totalFraisFixes)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {nbImpayees} facture{nbImpayees > 1 ? 's' : ''} + frais fixes
+                  </div>
                 </div>
-                <div className="text-xs text-slate-500 mt-1">
-                  {nbImpayees} facture{nbImpayees > 1 ? 's' : ''} en attente
+                <span className={`text-xs ${myInfo.color} font-medium`}>{myInfo.label}</span>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-slate-500">Factures non payées</div>
+                  <div className="text-slate-200 font-semibold mt-0.5">
+                    {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(totalImpayees)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-slate-500">Frais fixes /mois</div>
+                  <div className="text-slate-200 font-semibold mt-0.5">
+                    {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(totalFraisFixes)}
+                  </div>
                 </div>
               </div>
-              <span className={`text-xs ${myInfo.color} font-medium`}>{myInfo.label}</span>
-            </div>
+            </>
           )}
         </div>
       )}

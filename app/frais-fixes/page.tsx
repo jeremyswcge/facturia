@@ -31,6 +31,13 @@ const MOIS = [
 
 const ANNEES = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - 1 + i))
 
+const UTILISATEURS = [
+  { value: 'jeremy', label: 'Jérémy', color: 'bg-blue-600', light: 'bg-blue-900/40 text-blue-400' },
+  { value: 'melina', label: 'Mélina', color: 'bg-pink-600', light: 'bg-pink-900/40 text-pink-400' },
+  { value: 'chloe', label: 'Chloé', color: 'bg-purple-600', light: 'bg-purple-900/40 text-purple-400' },
+  { value: 'commun', label: 'Commun', color: 'bg-slate-600', light: 'bg-slate-800 text-slate-400' },
+] as const
+
 function chf(n: number) {
   return new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(n)
 }
@@ -68,6 +75,7 @@ type FormType = {
   modeAnnuel: 'mensualise' | 'paiement-unique'
   moisPaiementAnnuel: string
   anneePaiementAnnuel: string
+  utilisateur: 'jeremy' | 'melina' | 'chloe' | 'commun'
 }
 
 const now = new Date()
@@ -79,6 +87,7 @@ const emptyForm: FormType = {
   modeAnnuel: 'mensualise',
   moisPaiementAnnuel: String(now.getMonth() + 1).padStart(2, '0'),
   anneePaiementAnnuel: String(now.getFullYear()),
+  utilisateur: 'commun',
 }
 
 export default function FraisFixesPage() {
@@ -148,6 +157,7 @@ export default function FraisFixesPage() {
       modeAnnuel: f.modeAnnuel || 'mensualise',
       moisPaiementAnnuel: f.moisPaiementAnnuel || String(now.getMonth() + 1).padStart(2, '0'),
       anneePaiementAnnuel: f.anneePaiementAnnuel || String(now.getFullYear()),
+      utilisateur: f.utilisateur || 'commun',
     })
     setSaveError('')
     setShowModal(true)
@@ -166,6 +176,7 @@ export default function FraisFixesPage() {
         jourPrelevement: form.jourPrelevement ? parseInt(form.jourPrelevement) : undefined,
         moisDebut: form.moisDebut,
         anneeDebut: form.anneeDebut,
+        utilisateur: form.utilisateur,
         actif: true,
       }
       if (form.frequence === 'annuel') {
@@ -245,7 +256,13 @@ export default function FraisFixesPage() {
                     </button>
 
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-slate-200">{f.nom}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm text-slate-200 truncate">{f.nom}</span>
+                        {(() => {
+                          const u = UTILISATEURS.find(x => x.value === (f.utilisateur || 'commun'))
+                          return u ? <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${u.light}`}>{u.label}</span> : null
+                        })()}
+                      </div>
                       <div className="text-xs text-slate-500">
                         {labelFrequence(f)}
                         {f.jourPrelevement ? ` · le ${f.jourPrelevement}` : ''}
@@ -388,6 +405,23 @@ export default function FraisFixesPage() {
                     placeholder="1-31"
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-violet-500"
                   />
+                </div>
+              </div>
+
+              {/* Utilisateur */}
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Appartient à</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {UTILISATEURS.map(u => (
+                    <button
+                      key={u.value}
+                      type="button"
+                      onClick={() => set('utilisateur', u.value)}
+                      className={`px-2 py-2 rounded-xl text-xs font-medium border transition-colors ${form.utilisateur === u.value ? `${u.color} text-white border-transparent` : 'border-slate-600 text-slate-400 hover:border-slate-500'}`}
+                    >
+                      {u.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

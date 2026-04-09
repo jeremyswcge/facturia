@@ -37,6 +37,7 @@ export interface FraisFixes {
   // Pour paiement unique annuel : mois et année du paiement
   moisPaiementAnnuel?: string  // "MM"
   anneePaiementAnnuel?: string // "YYYY"
+  utilisateur?: Utilisateur
 }
 
 export interface Salaire {
