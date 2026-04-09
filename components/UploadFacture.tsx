@@ -173,17 +173,15 @@ export default function UploadFacture({ onSaved, onClose }: Props) {
   }
 
   return (
-    <>
-      {/* Overlay */}
-      <div className="fixed inset-0 z-50 bg-black/60" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex flex-col">
+      {/* Tap zone to close */}
+      <div className="flex-shrink-0 bg-black/60" style={{ height: '72px' }} onClick={onClose} />
 
-      {/* Sheet — plein écran mobile, carte desktop */}
-      <div className="fixed inset-x-0 bottom-0 md:inset-0 z-50 flex md:items-center md:justify-center md:p-4 pointer-events-none">
-        <div
-          className="pointer-events-auto w-full md:max-w-lg bg-slate-900 md:rounded-2xl border-t md:border border-slate-700 shadow-2xl flex flex-col"
-          style={{ height: 'calc(100dvh - 72px)', maxHeight: '100dvh' }}
-          onClick={e => e.stopPropagation()}
-        >
+      {/* Sheet — occupe tout l'espace sous la navbar du haut */}
+      <div
+        className="flex-1 w-full bg-slate-900 border-t border-slate-700 shadow-2xl flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 flex-shrink-0">
             <div className="flex items-center gap-3">
@@ -460,6 +458,5 @@ export default function UploadFacture({ onSaved, onClose }: Props) {
           )}
         </div>
       </div>
-    </>
   )
 }

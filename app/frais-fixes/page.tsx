@@ -49,6 +49,7 @@ export default function FraisFixesPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<typeof emptyForm>(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -105,30 +106,30 @@ export default function FraisFixesPage() {
   async function save() {
     if (!form.nom || !form.montant) return
     setSaving(true)
-    const data = {
-      nom: form.nom,
-      montant: parseFloat(form.montant),
-      frequence: form.frequence,
-      categorie: form.categorie,
-      jourPrelevement: form.jourPrelevement ? parseInt(form.jourPrelevement) : undefined,
-      actif: true,
-    }
-    if (editId) {
-      await fetch('/api/frais-fixes', {
+    setSaveError('')
+    try {
+      const data = {
+        nom: form.nom,
+        montant: parseFloat(form.montant),
+        frequence: form.frequence,
+        categorie: form.categorie,
+        jourPrelevement: form.jourPrelevement ? parseInt(form.jourPrelevement) : undefined,
+        actif: true,
+      }
+      const res = await fetch('/api/frais-fixes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update', id: editId, data }),
+        body: JSON.stringify(editId ? { action: 'update', id: editId, data } : { data }),
       })
-    } else {
-      await fetch('/api/frais-fixes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data }),
-      })
+      const json = await res.json()
+      if (!res.ok || json.error) throw new Error(json.error || 'Erreur serveur')
+      setShowModal(false)
+      load()
+    } catch (err: any) {
+      setSaveError(err.message || 'Erreur inconnue')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
-    setShowModal(false)
-    load()
   }
 
   // Group by category
@@ -285,7 +286,10 @@ export default function FraisFixesPage() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
+            {saveError && (
+              <div className="mt-3 text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{saveError}</div>
+            )}
+            <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setShowModal(false)}
                 className="flex-1 border border-slate-700 text-slate-400 hover:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
