@@ -43,11 +43,12 @@ export default function UploadFacture({ onSaved, onClose }: Props) {
   const [dateEcheance, setDateEcheance] = useState('')
   const [categorie, setCategorie] = useState('autre')
   const [notes, setNotes] = useState('')
-  const [utilisateur, setUtilisateur] = useState<'jeremy' | 'melina' | 'commun'>('commun')
+  const [utilisateur, setUtilisateur] = useState<'jeremy' | 'melina' | 'chloe' | 'commun'>('commun')
 
   const UTILISATEURS = [
     { value: 'jeremy' as const, label: 'Jérémy', color: 'bg-blue-600' },
     { value: 'melina' as const, label: 'Mélina', color: 'bg-pink-600' },
+    { value: 'chloe' as const, label: 'Chloé', color: 'bg-purple-600' },
     { value: 'commun' as const, label: 'Commun', color: 'bg-slate-600' },
   ]
 

@@ -29,12 +29,13 @@ function chf(n: number) {
 const UTILISATEURS = [
   { value: 'jeremy', label: 'Jérémy', color: 'bg-blue-600', light: 'bg-blue-900/40 text-blue-400' },
   { value: 'melina', label: 'Mélina', color: 'bg-pink-600', light: 'bg-pink-900/40 text-pink-400' },
+  { value: 'chloe', label: 'Chloé', color: 'bg-purple-600', light: 'bg-purple-900/40 text-purple-400' },
   { value: 'commun', label: 'Commun', color: 'bg-slate-600', light: 'bg-slate-800 text-slate-400' },
 ] as const
 
 const emptyForm = {
   emetteur: '', montant: '', dateReception: format(new Date(), 'yyyy-MM-dd'),
-  dateEcheance: '', categorie: 'autre', notes: '', utilisateur: 'commun' as 'jeremy' | 'melina' | 'commun',
+  dateEcheance: '', categorie: 'autre', notes: '', utilisateur: 'commun' as 'jeremy' | 'melina' | 'chloe' | 'commun',
 }
 
 export default function FacturesPage() {
@@ -42,7 +43,7 @@ export default function FacturesPage() {
   const [loading, setLoading] = useState(true)
   const [filterPaid, setFilterPaid] = useState<'all' | 'paid' | 'pending'>('all')
   const [filterCat, setFilterCat] = useState('')
-  const [filterUser, setFilterUser] = useState<'all' | 'jeremy' | 'melina' | 'commun'>('all')
+  const [filterUser, setFilterUser] = useState<'all' | 'jeremy' | 'melina' | 'chloe' | 'commun'>('all')
   const [showModal, setShowModal] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -77,7 +78,7 @@ export default function FacturesPage() {
   }
 
   async function cycleUtilisateur(f: Facture) {
-    const order: Array<'jeremy' | 'melina' | 'commun'> = ['jeremy', 'melina', 'commun']
+    const order: Array<'jeremy' | 'melina' | 'chloe' | 'commun'> = ['jeremy', 'melina', 'chloe', 'commun']
     const current = f.utilisateur || 'commun'
     const next = order[(order.indexOf(current) + 1) % order.length]
     await fetch('/api/factures', {

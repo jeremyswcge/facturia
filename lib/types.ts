@@ -1,4 +1,4 @@
-export type Utilisateur = 'jeremy' | 'melina' | 'commun'
+export type Utilisateur = 'jeremy' | 'melina' | 'chloe' | 'commun'
 
 export interface Facture {
   id: string
