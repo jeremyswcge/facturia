@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useAuth } from './AuthProvider'
+import { logout } from '@/lib/auth'
 
 const links = [
   { href: '/dashboard', label: 'Tableau de bord', icon: '📊' },
@@ -11,6 +13,7 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname()
+  const { user } = useAuth()
 
   return (
     <>
@@ -20,7 +23,7 @@ export default function Nav() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm font-bold">F</div>
           <span className="font-semibold text-lg tracking-tight">Facturia</span>
         </div>
-        <nav className="hidden md:flex gap-1">
+        <nav className="hidden md:flex gap-1 flex-1">
           {links.map(l => (
             <Link
               key={l.href}
@@ -36,6 +39,22 @@ export default function Nav() {
             </Link>
           ))}
         </nav>
+        {user && (
+          <div className="hidden md:flex items-center gap-3 ml-auto">
+            <div className="flex items-center gap-2">
+              {user.photoURL && (
+                <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full" />
+              )}
+              <span className="text-xs text-slate-400">{user.displayName || user.email}</span>
+            </div>
+            <button
+              onClick={logout}
+              className="text-xs text-slate-500 hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-900/20"
+            >
+              Déconnexion
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Mobile bottom bar */}
@@ -54,6 +73,14 @@ export default function Nav() {
             <span className="hidden sm:block">{l.label}</span>
           </Link>
         ))}
+        {user && (
+          <button
+            onClick={logout}
+            className="flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium text-slate-500 hover:text-red-400 transition-colors"
+          >
+            <span className="text-xl">🚪</span>
+          </button>
+        )}
       </nav>
     </>
   )
