@@ -1,28 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
-// Polyfill browser APIs manquantes dans Node.js (requis par pdf-parse/pdfjs)
-if (typeof globalThis.DOMMatrix === 'undefined') {
-  (globalThis as any).DOMMatrix = class DOMMatrix {
-    a=1;b=0;c=0;d=1;e=0;f=0
-    constructor() {}
-    multiply() { return this }
-    translate() { return this }
-    scale() { return this }
-    rotate() { return this }
-    inverse() { return this }
-    transformPoint(p: any) { return p }
-  }
-}
-if (typeof globalThis.Path2D === 'undefined') {
-  (globalThis as any).Path2D = class Path2D {}
-}
-if (typeof globalThis.ImageData === 'undefined') {
-  (globalThis as any).ImageData = class ImageData {
-    constructor(public data: any, public width: number, public height: number) {}
-  }
-}
-
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const PROMPT = `Tu es un assistant spécialisé dans l'analyse de factures suisses.
@@ -68,14 +46,25 @@ async function analyzeImages(images: { data: string; mediaType: string }[]) {
   return JSON.parse(text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
 }
 
-async function analyzePdf(pdfText: string) {
+async function analyzePdfNative(base64: string) {
+  // Claude supporte nativement les PDF via le type "document"
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [
       {
         role: 'user',
-        content: `${PROMPT}\n\nContenu du document :\n${pdfText.substring(0, 8000)}`,
+        content: [
+          {
+            type: 'document' as const,
+            source: {
+              type: 'base64' as const,
+              media_type: 'application/pdf',
+              data: base64,
+            },
+          } as any,
+          { type: 'text' as const, text: PROMPT },
+        ],
       },
     ],
   })
@@ -87,7 +76,7 @@ async function analyzePdf(pdfText: string) {
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
-    const type = formData.get('type') as string // 'images' | 'pdf'
+    const type = formData.get('type') as string
 
     let result: any = null
 
@@ -109,11 +98,9 @@ export async function POST(req: NextRequest) {
       const file = formData.get('pdf') as File
       if (!file) return NextResponse.json({ error: 'Aucun PDF fourni' }, { status: 400 })
 
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const pdfParseModule = await import('pdf-parse')
-      const pdfParse = (pdfParseModule as any).default ?? pdfParseModule
-      const parsed = await pdfParse(buffer)
-      result = await analyzePdf(parsed.text)
+      const buffer = await file.arrayBuffer()
+      const base64 = Buffer.from(buffer).toString('base64')
+      result = await analyzePdfNative(base64)
 
     } else {
       return NextResponse.json({ error: 'Type invalide' }, { status: 400 })
