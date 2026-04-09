@@ -34,5 +34,5 @@ await write(join(iconsDir, 'icon-512.png'), await pad(512))
 await write(join(iconsDir, 'icon-512-maskable.png'), await pad(512, 0.2))
 
 // Next.js app/ icon convention (auto-served as /icon and /apple-icon)
-await write(join(appDir, 'icon.png'), await pad(512, 0.08))
+await write(join(appDir, 'icon.png'), await pad(180, 0.08))
 await write(join(appDir, 'apple-icon.png'), await pad(180, 0.1))
