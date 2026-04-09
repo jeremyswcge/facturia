@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <AuthGuard>
             <Nav />
-            <main className="pt-28 pb-20 md:pb-4 min-h-screen">{children}</main>
+            <main className="pt-4 md:pt-28 pb-24 md:pb-6 min-h-screen">{children}</main>
           </AuthGuard>
         </AuthProvider>
       </body>

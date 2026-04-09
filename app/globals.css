@@ -21,6 +21,11 @@ body {
 ::-webkit-scrollbar-track { background: #0f172a; }
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 
+/* Safe area (encoche iPhone) */
+.pb-safe {
+  padding-bottom: max(0px, env(safe-area-inset-bottom));
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }

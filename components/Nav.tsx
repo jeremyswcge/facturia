@@ -17,8 +17,8 @@ export default function Nav() {
 
   return (
     <>
-      {/* Desktop top bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 h-28 flex items-center px-6">
+      {/* Desktop top bar — caché sur mobile */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 h-28 hidden md:flex items-center px-6">
         <div className="flex items-center gap-3 mr-10">
           <img src="/icons/icon-192.png" alt="Facturia" className="w-24 h-24 rounded-lg" />
           <span className="font-semibold text-lg tracking-tight">Facturia</span>
@@ -58,27 +58,30 @@ export default function Nav() {
       </header>
 
       {/* Mobile bottom bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-slate-900/95 backdrop-blur border-t border-slate-800 flex">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-slate-900/95 backdrop-blur border-t border-slate-800 flex pb-safe">
         {links.map(l => (
           <Link
             key={l.href}
             href={l.href}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
+            className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-4 min-h-[72px] font-medium transition-colors ${
               pathname.startsWith(l.href)
                 ? 'text-violet-400'
-                : 'text-slate-500 hover:text-slate-300'
+                : 'text-slate-500 active:text-slate-200'
             }`}
           >
-            <span className="text-xl">{l.icon}</span>
-            <span className="hidden sm:block">{l.label}</span>
+            <span className={`transition-transform ${pathname.startsWith(l.href) ? 'scale-110' : ''} text-2xl`}>
+              {l.icon}
+            </span>
+            <span className="text-[11px] leading-tight">{l.label}</span>
           </Link>
         ))}
         {user && (
           <button
             onClick={logout}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium text-slate-500 hover:text-red-400 transition-colors"
+            className="flex-1 flex flex-col items-center justify-center gap-1.5 py-4 min-h-[72px] font-medium text-slate-500 active:text-red-400 transition-colors"
           >
-            <span className="text-xl">🚪</span>
+            <span className="text-2xl">🚪</span>
+            <span className="text-[11px] leading-tight">Quitter</span>
           </button>
         )}
       </nav>
