@@ -4,6 +4,7 @@ import './globals.css'
 import Nav from '@/components/Nav'
 import { AuthProvider } from '@/components/AuthProvider'
 import AuthGuard from '@/components/AuthGuard'
+import PWARegister from '@/components/PWARegister'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <body className={`${inter.className} bg-slate-950 text-slate-100 min-h-screen`}>
+        <PWARegister />
         <AuthProvider>
           <AuthGuard>
             <Nav />
