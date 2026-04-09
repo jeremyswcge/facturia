@@ -26,8 +26,6 @@ export default function Dashboard() {
   const [factures, setFactures] = useState<Facture[]>([])
   const [fraisFixes, setFraisFixes] = useState<FraisFixes[]>([])
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'))
-  const [syncing, setSyncing] = useState(false)
-  const [syncMsg, setSyncMsg] = useState('')
 
   const load = useCallback(async () => {
     const [m, y] = selectedMonth.split('-')
@@ -84,21 +82,6 @@ export default function Dashboard() {
     .sort((a, b) => (a.dateEcheance! > b.dateEcheance! ? 1 : -1))
     .slice(0, 5)
 
-  async function handleSync() {
-    setSyncing(true)
-    setSyncMsg('')
-    try {
-      const res = await fetch('/api/gmail-sync', { method: 'POST' })
-      const data = await res.json()
-      setSyncMsg(`${data.synced || 0} facture(s) importée(s)`)
-      load()
-    } catch {
-      setSyncMsg('Erreur de synchronisation')
-    } finally {
-      setSyncing(false)
-    }
-  }
-
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = new Date()
     d.setMonth(d.getMonth() - i)
@@ -125,21 +108,8 @@ export default function Dashboard() {
               </option>
             ))}
           </select>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            {syncing ? '⏳' : '📧'} {syncing ? 'Sync...' : 'Gmail Sync'}
-          </button>
         </div>
       </div>
-
-      {syncMsg && (
-        <div className="bg-emerald-900/30 border border-emerald-700 text-emerald-300 px-4 py-3 rounded-lg text-sm">
-          ✓ {syncMsg}
-        </div>
-      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
