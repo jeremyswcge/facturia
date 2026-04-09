@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
+// Polyfill browser APIs manquantes dans Node.js (requis par pdf-parse/pdfjs)
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  (globalThis as any).DOMMatrix = class DOMMatrix {
+    a=1;b=0;c=0;d=1;e=0;f=0
+    constructor() {}
+    multiply() { return this }
+    translate() { return this }
+    scale() { return this }
+    rotate() { return this }
+    inverse() { return this }
+    transformPoint(p: any) { return p }
+  }
+}
+if (typeof globalThis.Path2D === 'undefined') {
+  (globalThis as any).Path2D = class Path2D {}
+}
+if (typeof globalThis.ImageData === 'undefined') {
+  (globalThis as any).ImageData = class ImageData {
+    constructor(public data: any, public width: number, public height: number) {}
+  }
+}
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const PROMPT = `Tu es un assistant spécialisé dans l'analyse de factures suisses.
