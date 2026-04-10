@@ -114,39 +114,41 @@ export default function RemboursementBuclinPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6 fade-in">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">💰 Remboursement Buclin</h1>
-          <p className="text-sm text-slate-400 mt-1">Suivi des montants dus et des versements effectués.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100">💰 Remboursement Buclin</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">Suivi des montants dus et des versements effectués.</p>
         </div>
         {saving && <span className="text-xs text-slate-500 animate-pulse">Sauvegarde...</span>}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
         {/* Montants à rembourser */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
-          <h2 className="text-base font-semibold text-slate-200">Montants à rembourser</h2>
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 sm:p-5 space-y-3 sm:space-y-4">
+          <h2 className="text-sm sm:text-base font-semibold text-slate-200">Montants à rembourser</h2>
 
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Description"
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addItem()}
-              className="flex-[2] bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-violet-500 transition-colors"
-            />
-            <input
-              type="number"
-              placeholder="CHF"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addItem()}
-              step="0.05"
-              min="0"
-              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-violet-500 transition-colors"
-            />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex gap-2 flex-1">
+              <input
+                type="text"
+                placeholder="Description"
+                value={desc}
+                onChange={(e) => setDesc(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addItem()}
+                className="flex-[2] min-w-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-violet-500 transition-colors"
+              />
+              <input
+                type="number"
+                placeholder="CHF"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addItem()}
+                step="0.05"
+                min="0"
+                className="w-20 sm:flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 sm:px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-violet-500 transition-colors"
+              />
+            </div>
             <button
               onClick={addItem}
               disabled={saving}
@@ -184,31 +186,33 @@ export default function RemboursementBuclinPage() {
 
           <div className="border-t border-slate-700 pt-3 flex items-center justify-between">
             <span className="text-sm font-semibold text-slate-300">Total dû</span>
-            <span className="text-lg font-bold text-violet-400">{chf(totalDu)}</span>
+            <span className="text-base sm:text-lg font-bold text-violet-400">{chf(totalDu)}</span>
           </div>
         </div>
 
         {/* Versements effectués */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
-          <h2 className="text-base font-semibold text-slate-200">Versements effectués</h2>
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 sm:p-5 space-y-3 sm:space-y-4">
+          <h2 className="text-sm sm:text-base font-semibold text-slate-200">Versements effectués</h2>
 
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={payDate}
-              onChange={(e) => setPayDate(e.target.value)}
-              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500 transition-colors"
-            />
-            <input
-              type="number"
-              placeholder="CHF"
-              value={payAmount}
-              onChange={(e) => setPayAmount(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addPayment()}
-              step="0.05"
-              min="0"
-              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
-            />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex gap-2 flex-1">
+              <input
+                type="date"
+                value={payDate}
+                onChange={(e) => setPayDate(e.target.value)}
+                className="flex-1 min-w-0 bg-slate-800 border border-slate-700 rounded-lg px-2 sm:px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500 transition-colors"
+              />
+              <input
+                type="number"
+                placeholder="CHF"
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addPayment()}
+                step="0.05"
+                min="0"
+                className="w-20 sm:flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 sm:px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
+              />
+            </div>
             <button
               onClick={addPayment}
               disabled={saving}
@@ -252,23 +256,23 @@ export default function RemboursementBuclinPage() {
 
           <div className="border-t border-slate-700 pt-3 flex items-center justify-between">
             <span className="text-sm font-semibold text-slate-300">Total remboursé</span>
-            <span className="text-lg font-bold text-emerald-400">{chf(totalRembourse)}</span>
+            <span className="text-base sm:text-lg font-bold text-emerald-400">{chf(totalRembourse)}</span>
           </div>
         </div>
       </div>
 
       {/* Solde */}
       <div
-        className={`rounded-2xl border p-5 flex items-center justify-between ${
+        className={`rounded-2xl border p-3 sm:p-5 flex items-center justify-between ${
           solde <= 0
             ? 'bg-emerald-900/20 border-emerald-800/50'
             : 'bg-red-900/20 border-red-800/50'
         }`}
       >
-        <span className="text-base font-semibold text-slate-200">
+        <span className="text-sm sm:text-base font-semibold text-slate-200">
           {solde <= 0 ? '✅ Tout est remboursé !' : 'Solde restant à rembourser'}
         </span>
-        <span className={`text-xl font-bold ${solde <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+        <span className={`text-lg sm:text-xl font-bold ${solde <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
           {chf(Math.abs(solde))}
         </span>
       </div>
