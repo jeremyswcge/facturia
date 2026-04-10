@@ -9,6 +9,7 @@ const links = [
   { href: '/dashboard', label: 'Tableau de bord', icon: '📊' },
   { href: '/factures', label: 'Factures', icon: '🧾' },
   { href: '/frais-fixes', label: 'Frais fixes', icon: '📌' },
+  { href: '/remboursement-buclin', label: 'Buclin', icon: '💰' },
   { href: '/profil', label: 'Profil', icon: '👤' },
 ]
 
