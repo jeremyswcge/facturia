@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 type Item = {
   id: string
@@ -14,21 +14,6 @@ type Payment = {
   amount: number
 }
 
-const STORAGE_KEY = 'remboursement-buclin'
-
-function loadData(): { items: Item[]; payments: Payment[] } {
-  if (typeof window === 'undefined') return { items: [], payments: [] }
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {}
-  return { items: [], payments: [] }
-}
-
-function saveData(items: Item[], payments: Payment[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, payments }))
-}
-
 function chf(n: number) {
   return new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(n)
 }
@@ -40,47 +25,87 @@ export default function RemboursementBuclinPage() {
   const [amount, setAmount] = useState('')
   const [payAmount, setPayAmount] = useState('')
   const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [loaded, setLoaded] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    const data = loadData()
-    setItems(data.items)
-    setPayments(data.payments)
-    setLoaded(true)
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/remboursement-buclin')
+      const data = await res.json()
+      setItems(Array.isArray(data.items) ? data.items : [])
+      setPayments(Array.isArray(data.payments) ? data.payments : [])
+    } catch {}
+    setLoading(false)
   }, [])
 
-  useEffect(() => {
-    if (loaded) saveData(items, payments)
-  }, [items, payments, loaded])
+  useEffect(() => { load() }, [load])
 
   const totalDu = items.reduce((s, i) => s + i.amount, 0)
   const totalRembourse = payments.reduce((s, p) => s + p.amount, 0)
   const solde = totalDu - totalRembourse
 
-  function addItem() {
+  async function addItem() {
     const a = parseFloat(amount)
     if (!desc.trim() || isNaN(a) || a <= 0) return
-    setItems([...items, { id: crypto.randomUUID(), description: desc.trim(), amount: a }])
-    setDesc('')
-    setAmount('')
+    setSaving(true)
+    try {
+      const res = await fetch('/api/remboursement-buclin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'item', data: { description: desc.trim(), amount: a } }),
+      })
+      const { id } = await res.json()
+      setItems([...items, { id, description: desc.trim(), amount: a }])
+      setDesc('')
+      setAmount('')
+    } catch {}
+    setSaving(false)
   }
 
-  function removeItem(id: string) {
-    setItems(items.filter((i) => i.id !== id))
+  async function removeItem(id: string) {
+    setSaving(true)
+    try {
+      await fetch('/api/remboursement-buclin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', type: 'item', id }),
+      })
+      setItems(items.filter((i) => i.id !== id))
+    } catch {}
+    setSaving(false)
   }
 
-  function addPayment() {
+  async function addPayment() {
     const a = parseFloat(payAmount)
     if (isNaN(a) || a <= 0 || !payDate) return
-    setPayments([...payments, { id: crypto.randomUUID(), date: payDate, amount: a }])
-    setPayAmount('')
+    setSaving(true)
+    try {
+      const res = await fetch('/api/remboursement-buclin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'payment', data: { date: payDate, amount: a } }),
+      })
+      const { id } = await res.json()
+      setPayments([...payments, { id, date: payDate, amount: a }])
+      setPayAmount('')
+    } catch {}
+    setSaving(false)
   }
 
-  function removePayment(id: string) {
-    setPayments(payments.filter((p) => p.id !== id))
+  async function removePayment(id: string) {
+    setSaving(true)
+    try {
+      await fetch('/api/remboursement-buclin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', type: 'payment', id }),
+      })
+      setPayments(payments.filter((p) => p.id !== id))
+    } catch {}
+    setSaving(false)
   }
 
-  if (!loaded) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-slate-500">Chargement...</p>
@@ -90,9 +115,12 @@ export default function RemboursementBuclinPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6 fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-100">💰 Remboursement Buclin</h1>
-        <p className="text-sm text-slate-400 mt-1">Suivi des montants dus et des versements effectués.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-100">💰 Remboursement Buclin</h1>
+          <p className="text-sm text-slate-400 mt-1">Suivi des montants dus et des versements effectués.</p>
+        </div>
+        {saving && <span className="text-xs text-slate-500 animate-pulse">Sauvegarde...</span>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -121,7 +149,8 @@ export default function RemboursementBuclinPage() {
             />
             <button
               onClick={addItem}
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+              disabled={saving}
+              className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
             >
               Ajouter
             </button>
@@ -142,7 +171,8 @@ export default function RemboursementBuclinPage() {
                   </span>
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="ml-2 text-slate-500 hover:text-red-400 transition-colors text-lg leading-none px-1"
+                    disabled={saving}
+                    className="ml-2 text-slate-500 hover:text-red-400 disabled:opacity-50 transition-colors text-lg leading-none px-1"
                     title="Supprimer"
                   >
                     ×
@@ -181,7 +211,8 @@ export default function RemboursementBuclinPage() {
             />
             <button
               onClick={addPayment}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+              disabled={saving}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
             >
               Ajouter
             </button>
@@ -208,7 +239,8 @@ export default function RemboursementBuclinPage() {
                   </span>
                   <button
                     onClick={() => removePayment(p.id)}
-                    className="ml-2 text-slate-500 hover:text-red-400 transition-colors text-lg leading-none px-1"
+                    disabled={saving}
+                    className="ml-2 text-slate-500 hover:text-red-400 disabled:opacity-50 transition-colors text-lg leading-none px-1"
                     title="Supprimer"
                   >
                     ×
